@@ -7,7 +7,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from dotenv import load_dotenv
 import os
-# Twitter credentials
+# Twitter credentials foily proo
+
 load_dotenv()
 USERNAME = os.getenv('name')
 PASSWORD = os.getenv('password')
