@@ -5,19 +5,19 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+from dotenv import load_dotenv
+import os
 
-# Twitter credentials
-USERNAME = 'anastasia_luv7'
-PASSWORD = 'Kelvin128'
+# Load Twitter credentials from environment variables
+load_dotenv()
+USERNAME = os.getenv('name')
+PASSWORD = os.getenv('password')
 
 # Target profile username
-TARGET_PROFILE = 'waifuflare'
-
-# Message to send
-MESSAGE = "Hi! Thanks for following me. Have a great day!"
+TARGET_PROFILE = 'waifuflare'  # Change this to the specified user
 
 # Setup Chrome WebDriver
-service = Service('E:\\Twitter bot\\chromedriver.exe')
+service = Service('E:\\\\Twitter bot\\\\chromedriver.exe')
 driver = webdriver.Chrome(service=service)
 
 def login_to_twitter():
@@ -45,7 +45,7 @@ def login_to_twitter():
         print("Error during login:", e)
         driver.quit()
         exit()
-
+        
 def extract_followers(profile_username):
     followers_list = set()  # Use a set to avoid duplicates
     try:
@@ -57,37 +57,36 @@ def extract_followers(profile_username):
         wait.until(EC.presence_of_element_located((By.XPATH, '//div[@data-testid="cellInnerDiv"]')))
         print("Followers page loaded")
 
-        last_height = driver.execute_script("return document.body.scrollHeight")
-        
-        while True:
-            follower_elements = driver.find_elements(By.XPATH, '//div[@data-testid="cellInnerDiv"]//div[@dir="ltr"]/span')
-            for element in follower_elements:
-                followers_list.add(element.text)
-            
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(3)  # Wait for new followers to load
-            
-            new_height = driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                break
-            last_height = new_height
+        # scroll for 5more seconds
 
-        print("Extracted followers:", followers_list)
-        return followers_list
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(3)
 
+        # Extract followers
+        followers_elements = driver.find_elements(By.XPATH, '//div[@data-testid="cellInnerDiv"]')
+        print(f"Found {len(followers_elements)} followers")
+        time.sleep(5)  # Wait for the followers list to load properly
+        for follower_element in followers_elements:
+            # username_element = follower_element.find_element(By.XPATH, './/span[contains(@class, "css-901oao")]')
+            username = follower_element.text.split('\n')[1]
+            if username.startswith('@'):
+                followers_list.add(username)
+            time.sleep(1)  # Add a delay to avoid getting blocked
+
+        print(f"Extracted {len(followers_list)} followers")
+        return list(followers_list)
     except Exception as e:
         print("Error extracting followers:", e)
-        driver.quit()
-        exit()
+        return list(followers_list)
 
-def follow_and_message_followers(followers_list):
+def follow_followers(followers_list):
     for username in followers_list:
         try:
             # Navigate to the follower's profile page
             driver.get(f"https://twitter.com/{username}")
             time.sleep(3)  # Wait for the page to load properly
-
-            # Follow the user
+            
+            # Find the follow button and click it
             try:
                 follow_button = driver.find_element(By.XPATH, '//div[@data-testid="placementTracking"]//span[text()="Follow"]')
                 follow_button.click()
@@ -96,47 +95,15 @@ def follow_and_message_followers(followers_list):
                 print(f"Could not find follow button for {username}: {e}")
                 continue
 
-            time.sleep(2)  # Wait for the follow action to complete
-
-            # Find the message button and click it to initiate a message
-            try:
-                message_button = driver.find_element(By.XPATH, '//div[@data-testid="DMButton"]')
-                message_button.click()
-                print("Message button clicked")
-            except Exception as e:
-                print(f"Could not find message button for {username}: {e}")
-                continue
-
-            time.sleep(2)  # Wait for the message dialog to open
-
-            # Find the message input field and send the message
-            try:
-                message_field = driver.find_element(By.XPATH, '//div[@data-testid="dmComposerTextInput"]')
-                message_field.send_keys(MESSAGE)
-                print("Message typed")
-            except Exception as e:
-                print(f"Could not find message field for {username}: {e}")
-                continue
-
-            # Find the send button and click it
-            try:
-                send_button = driver.find_element(By.XPATH, '//div[@data-testid="dmComposerSendButton"]')
-                send_button.click()
-                print("Send button clicked")
-            except Exception as e:
-                print(f"Could not find send button for {username}: {e}")
-                continue
-
-            print(f"Message sent to {username}")
-
         except Exception as e:
-            print(f"Error interacting with {username}:", e)
+            print("Error following user:", e)
 
 def main():
     try:
         login_to_twitter()
         followers_list = extract_followers(TARGET_PROFILE)
-        follow_and_message_followers(followers_list)
+        print("Followers:", followers_list)  # Print out the list of followers for verification
+        follow_followers(followers_list)
     finally:
         driver.quit()
 
