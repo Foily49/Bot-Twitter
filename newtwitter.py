@@ -14,7 +14,7 @@ USERNAME = os.getenv('name')
 PASSWORD = os.getenv('password')
 
 # Target profile username
-TARGET_PROFILE = 'waifuflare'  # Change this to the specified user
+TARGET_PROFILE = 'Sarabellalondon'  # Change this to the specified user
 
 # Setup Chrome WebDriver
 service = Service('E:\\\\Twitter bot\\\\chromedriver.exe')
@@ -57,27 +57,41 @@ def extract_followers(profile_username):
         wait.until(EC.presence_of_element_located((By.XPATH, '//div[@data-testid="cellInnerDiv"]')))
         print("Followers page loaded")
 
-        # scroll for 5more seconds
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        while True:
+            # Extract followers
+            followers_elements = driver.find_elements(By.XPATH, '//div[@data-testid="cellInnerDiv"]')
+            print(f"Found {len(followers_elements)} followers")
 
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(3)
+            for follower_element in followers_elements:
+                try:
+                    # Adding debug information
+                    print(f"Follower element text: {follower_element.text}")
+                    
+                    # Attempting to find the username by locating the span that starts with @
+                    spans = follower_element.find_elements(By.XPATH, './/span')
+                    for span in spans:
+                        if span.text.startswith('@'):
+                            username = span.text
+                            followers_list.add(username)
+                            break
+                except Exception as e:
+                    print("Error extracting a follower username:", e)
+                    continue
 
-        # Extract followers
-        followers_elements = driver.find_elements(By.XPATH, '//div[@data-testid="cellInnerDiv"]')
-        print(f"Found {len(followers_elements)} followers")
-        time.sleep(5)  # Wait for the followers list to load properly
-        for follower_element in followers_elements:
-            # username_element = follower_element.find_element(By.XPATH, './/span[contains(@class, "css-901oao")]')
-            username = follower_element.text.split('\n')[1]
-            if username.startswith('@'):
-                followers_list.add(username)
-            time.sleep(1)  # Add a delay to avoid getting blocked
+            # Scroll down to the bottom
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)  # Wait for the page to load
+
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
 
         print(f"Extracted {len(followers_list)} followers")
-        return list(followers_list)
     except Exception as e:
         print("Error extracting followers:", e)
-        return list(followers_list)
+    return list(followers_list)
 
 def follow_followers(followers_list):
     for username in followers_list:
