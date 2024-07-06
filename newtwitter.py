@@ -45,7 +45,7 @@ def login_to_twitter():
         print("Error during login:", e)
         driver.quit()
         exit()
-        
+
 def extract_followers(profile_username):
     followers_list = set()  # Use a set to avoid duplicates
     try:

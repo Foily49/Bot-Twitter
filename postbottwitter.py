@@ -1,3 +1,5 @@
+import schedule
+import time
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -7,12 +9,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from dotenv import load_dotenv
 import os
-import time
 
 # Load Twitter credentials from environment variables
 load_dotenv()
 USERNAME = os.getenv('name')
 PASSWORD = os.getenv('password')
+
+# Path to the media file you want to upload
+media_path = r'E:\\Twitter bot\\pic1.png'  # Replace with the actual path to your media file
 
 # Setup Chrome WebDriver
 service = Service('E:\\\\Twitter bot\\\\chromedriver.exe')
@@ -50,7 +54,7 @@ class TwitterBot:
             self.bot.quit()
             exit()
 
-    def post_tweet(self, tweet_body):
+    def post_tweet_with_media(self, tweet_body, media_path):
         if not self.is_logged_in:
             raise Exception("You must log in first!")
 
@@ -63,30 +67,51 @@ class TwitterBot:
             bot.find_element(By.XPATH, "//a[@data-testid='SideNav_NewTweet_Button']").click()
 
         time.sleep(4)
-        body = tweet_body
 
         try:
-            bot.find_element(By.XPATH, "//div[@role='textbox']").send_keys(body)
+            bot.find_element(By.XPATH, "//div[@role='textbox']").send_keys(tweet_body)
         except NoSuchElementException:
             time.sleep(3)
-            bot.find_element(By.XPATH, "//div[@role='textbox']").send_keys(body)
+            bot.find_element(By.XPATH, "//div[@role='textbox']").send_keys(tweet_body)
 
         time.sleep(4)
+
         try:
-            tweet_button=bot.find_element(By.CSS_SELECTOR, "[data-testid='tweetButton']")
+            # Upload the media file
+            media_input = bot.find_element(By.XPATH, '//input[@type="file"]')
+            media_input.send_keys(media_path)
+            print("Uploaded media")
+
+            # Wait for the media to be fully uploaded
+            time.sleep(4)
+
+            tweet_button = bot.find_element(By.CSS_SELECTOR, "[data-testid='tweetButton']")
             tweet_button.click()
             print("Clicked the tweet button")
         except NoSuchElementException:
             print("Error: Tweet button not found")
         time.sleep(4)
-        print("Tweet posted successfully")
+        print("Tweet with media posted successfully")
+
+    def schedule_tweet(self, tweet_body, media_path, post_time):
+        def job():
+            self.login_to_twitter()
+            self.post_tweet_with_media(tweet_body, media_path)
+            driver.quit()
+
+        schedule.every().day.at(post_time).do(job)
+        print(f"Tweet scheduled at {post_time}")
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
 def main():
-    tweet_body = 'Your tweet here'  # Replace with your tweet text
+    tweet_body = 'Your scheduled tweet with media'  # Replace with your tweet text
+    post_time = "15:03"  # Replace with the desired post time in HH:MM format (24-hour clock)
 
     twitter_bot = TwitterBot()
-    twitter_bot.login_to_twitter()
-    twitter_bot.post_tweet(tweet_body)
+    twitter_bot.schedule_tweet(tweet_body, media_path, post_time)
 
 if __name__ == "__main__":
     main()
