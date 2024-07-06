@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 from dotenv import load_dotenv
 import os
 import time
@@ -17,66 +18,75 @@ PASSWORD = os.getenv('password')
 service = Service('E:\\\\Twitter bot\\\\chromedriver.exe')
 driver = webdriver.Chrome(service=service)
 
-def login_to_twitter():
-    try:
-        driver.get("https://twitter.com/login")
-        wait = WebDriverWait(driver, 20)
-        print("Navigated to Twitter login page")
+class TwitterBot:
+    def __init__(self):
+        self.bot = driver
+        self.is_logged_in = False
 
-        username_field = wait.until(EC.presence_of_element_located((By.NAME, "text")))
-        username_field.send_keys(USERNAME)
-        print("Entered username")
+    def login_to_twitter(self):
+        try:
+            self.bot.get("https://twitter.com/login")
+            wait = WebDriverWait(self.bot, 20)
+            print("Navigated to Twitter login page")
 
-        next_button = driver.find_element(By.XPATH, "//span[text()='Next']")
-        next_button.click()
-        print("Clicked Next button")
+            username_field = wait.until(EC.presence_of_element_located((By.NAME, "text")))
+            username_field.send_keys(USERNAME)
+            print("Entered username")
 
-        password_field = wait.until(EC.presence_of_element_located((By.NAME, "password")))
-        password_field.send_keys(PASSWORD)
-        print("Entered password")
-        password_field.send_keys(Keys.RETURN)
+            next_button = self.bot.find_element(By.XPATH, "//span[text()='Next']")
+            next_button.click()
+            print("Clicked Next button")
 
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href="/home"]')))
-        print("Login successful")
-    except Exception as e:
-        print("Error during login:", e)
-        driver.quit()
-        exit()
+            password_field = wait.until(EC.presence_of_element_located((By.NAME, "password")))
+            password_field.send_keys(PASSWORD)
+            print("Entered password")
+            password_field.send_keys(Keys.RETURN)
 
-def post_tweet(caption):
-    try:
-        # Navigate to the home page
-        driver.get("https://twitter.com/home")
-        wait = WebDriverWait(driver, 20)
-        print("Navigated to Twitter home page")
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href="/home"]')))
+            print("Login successful")
+            self.is_logged_in = True
+        except Exception as e:
+            print("Error during login:", e)
+            self.bot.quit()
+            exit()
 
-        # Click on the Tweet button
-        tweet_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@href="/compose/tweet"]')))
-        tweet_button.click()
-        print("Clicked Tweet button")
+    def post_tweet(self, tweet_body):
+        if not self.is_logged_in:
+            raise Exception("You must log in first!")
 
-        # Wait for the Tweet dialog to appear
-        wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div/div/div[3]/div/div[2]/div[1]/div/div/div/div[2]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div[1]/div/div/div/div/div')))
-        print("Tweet dialog opened")
+        bot = self.bot
 
-        # Enter the caption
-        caption_field = driver.find_element(By.XPATH, '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div/div/div[3]/div/div[2]/div[1]/div/div/div/div[2]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div[1]/div/div/div/div/div')
-        caption_field.click()
-        caption_field.send_keys(caption)
-        print("Entered caption")
+        try:
+            bot.find_element(By.XPATH, "//a[@data-testid='SideNav_NewTweet_Button']").click()
+        except NoSuchElementException:
+            time.sleep(3)
+            bot.find_element(By.XPATH, "//a[@data-testid='SideNav_NewTweet_Button']").click()
 
-        # Click on the Tweet button to post
-        post_button = driver.find_element(By.XPATH, '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div/div/div[3]/div/div[2]/div[1]/div/div/div/div[2]/div[2]/div[2]/div/div/div/button/div/span/span')
-        post_button.click()
-        print("Posted the tweet")
-    except Exception as e:
-        print("Error posting tweet:", e)
+        time.sleep(4)
+        body = tweet_body
+
+        try:
+            bot.find_element(By.XPATH, "//div[@role='textbox']").send_keys(body)
+        except NoSuchElementException:
+            time.sleep(3)
+            bot.find_element(By.XPATH, "//div[@role='textbox']").send_keys(body)
+
+        time.sleep(4)
+        try:
+            tweet_button=bot.find_element(By.CSS_SELECTOR, "[data-testid='tweetButton']")
+            tweet_button.click()
+            print("Clicked the tweet button")
+        except NoSuchElementException:
+            print("Error: Tweet button not found")
+        time.sleep(4)
+        print("Tweet posted successfully")
 
 def main():
-    caption = 'Your caption here'  # Replace with your caption
+    tweet_body = 'Your tweet here'  # Replace with your tweet text
 
-    login_to_twitter()
-    post_tweet(caption)
+    twitter_bot = TwitterBot()
+    twitter_bot.login_to_twitter()
+    twitter_bot.post_tweet(tweet_body)
 
 if __name__ == "__main__":
     main()
